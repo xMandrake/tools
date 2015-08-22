@@ -16,8 +16,9 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 public class FileSystem {
-    private static final String PATH = "/Users/xDrake/cloud/google/photos/Италия/video/";
-    //private static final String PATH = "/Users/xDrake/develop/test/";
+//    private static final String PATH = "/Users/xDrake/cloud/google/photos/Италия/video/";
+    private static final String PATH = "/Users/xDrake/Downloads/";
+
     public static void main(String[] args) throws IOException {
         Path path = Paths.get(PATH);
         Map<String, Integer> map = new HashMap<>();
@@ -25,14 +26,14 @@ public class FileSystem {
         Stream<Path> stream = Files.walk(path, Integer.MAX_VALUE, FileVisitOption.FOLLOW_LINKS);
         stream.filter(p -> {
             try {
-                return Files.readAttributes(p, BasicFileAttributes.class).isRegularFile() && p.toString().endsWith("mp4");
+                return Files.readAttributes(p, BasicFileAttributes.class).isRegularFile()
+                        && (p.toString().endsWith("mp4") || p.toString().endsWith("AVI"));
             } catch (IOException e) {
                 e.printStackTrace();
                 return false;
             }
         }).forEach(p -> {
             try {
-
                 BasicFileAttributes basicFileAttributes = Files.readAttributes(p, BasicFileAttributes.class);
                 LocalDateTime dateTime = LocalDateTime.ofInstant(basicFileAttributes.creationTime().toInstant(), ZoneId.systemDefault());
 
