@@ -16,7 +16,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 public class FileSystem {
-    private static final String PATH = "/Users/xDrake/cloud/google/photos/Италия/photo/";
+    private static final String PATH = "/Users/xDrake/cloud/google/photos/Италия/video/";
     //private static final String PATH = "/Users/xDrake/develop/test/";
     public static void main(String[] args) throws IOException {
         Path path = Paths.get(PATH);
@@ -25,7 +25,7 @@ public class FileSystem {
         Stream<Path> stream = Files.walk(path, Integer.MAX_VALUE, FileVisitOption.FOLLOW_LINKS);
         stream.filter(p -> {
             try {
-                return Files.readAttributes(p, BasicFileAttributes.class).isRegularFile() && p.toString().endsWith("jpg");
+                return Files.readAttributes(p, BasicFileAttributes.class).isRegularFile() && p.toString().endsWith("mp4");
             } catch (IOException e) {
                 e.printStackTrace();
                 return false;
@@ -42,7 +42,7 @@ public class FileSystem {
                 String name = dateTime
                         .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
                         .replace("T", "_")
-                        .replace(":", "-") + "_" + checksum.substring(0, 3) + ".jpg";
+                        .replace(":", "-") + "_" + checksum.substring(0, 3) + ".mp4";
 
                 System.out.println(p.getFileName().toString() + " -> " + name);
                 Files.move(p, p.resolveSibling(name));
