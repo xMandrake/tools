@@ -1,27 +1,27 @@
 package ua.lg.dev.utils.files;
 
+
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.file.FileVisitOption;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class DuplicateFinder {
+    private AtomicLong counter = new AtomicLong(0);
     private Path sourcePath;
     private Path outputPath;
-    private Map<String, List<Path>> registry;
+    private Map<String, List<Path>> hashes;
 
     private DuplicateFinder(String sourceDir, String outputDir) throws Exception {
         this.sourcePath = Paths.get(sourceDir);
         this.outputPath = Paths.get(outputDir);
-        this.registry = new ConcurrentHashMap<>();
+        this.hashes = new ConcurrentHashMap<>();
     }
 
     public static void find(String sourceDir, String outputDir) throws Exception {
@@ -29,12 +29,13 @@ public class DuplicateFinder {
         long start = System.currentTimeMillis();
         finder.run();
         long finish = System.currentTimeMillis();
-        System.out.println(finish - start);
+        System.out.println((finish - start) + "ms");
     }
 
     private void run() throws Exception {
-        //90173
-        Files.walk(sourcePath, Integer.MAX_VALUE, FileVisitOption.FOLLOW_LINKS)
+        long totalSize = Files.walk(sourcePath, FileVisitOption.FOLLOW_LINKS).count();
+
+        Files.walk(sourcePath, FileVisitOption.FOLLOW_LINKS)
                 .parallel()
                 .filter(path -> {
                     try {
@@ -44,34 +45,51 @@ public class DuplicateFinder {
                         return false;
                     }
                 })
-                .filter(path -> path.toString().endsWith("JPG") || path.toString().endsWith("jpg"))
-//                .limit(100)
+//                .filter(path -> path.toString().endsWith("JPG") || path.toString().endsWith("jpg"))
+//                .limit(1)
                 .forEach(path -> {
                     try {
                         MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
                         String checksum = getFileChecksum(messageDigest, path);
 
-                        registry.compute(checksum, (key, val) -> {
+                        hashes.compute(checksum, (key, val) -> {
                             if (val == null) {
                                 val = new CopyOnWriteArrayList<>();
                             }
                             val.add(path);
                             return val;
                         });
-
-//                        System.out.println(path.getFileName() + " -> " + checksum);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
+
+
+                    System.out.println(counter.getAndIncrement() + " / " + totalSize);
                 });
 
-        for (String key : registry.keySet()) {
-            List<Path> paths = registry.get(key);
+        for (String key : hashes.keySet()) {
+            List<Path> paths = hashes.get(key);
+
             if (paths.size() > 1){
-                System.out.println(key + " -> " + paths.size());
-                paths.forEach(path -> System.out.println(path.toString()));
-                System.out.println("------------------------------------");
+                System.out.println("Дубликаты:");
+                paths.forEach(System.out::println);
+                System.out.println("=================================");
             }
+            //System.out.println(key);
+            //hashes.get(key).stream().forEach(System.out::println);
+            //System.out.println("=================================");
+
+            Path pathFrom = paths.iterator().next();
+            Path pathTarget = Paths.get(outputPath + pathFrom.toString().replace(sourcePath.toString(), ""));
+
+//            System.out.println(pathFrom);
+//            System.out.println(pathTarget);
+//            System.out.println(pathTarget.getParent());
+
+            if (!Files.exists(pathTarget.getParent())){
+                Files.createDirectories(pathTarget.getParent());
+            }
+            Files.copy(pathFrom, pathTarget, StandardCopyOption.COPY_ATTRIBUTES);
         }
     }
 
