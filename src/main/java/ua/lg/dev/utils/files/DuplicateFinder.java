@@ -3,6 +3,8 @@ package ua.lg.dev.utils.files;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.MathContext;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.security.MessageDigest;
@@ -45,8 +47,10 @@ public class DuplicateFinder {
                         return false;
                     }
                 })
-//                .filter(path -> path.toString().endsWith("JPG") || path.toString().endsWith("jpg"))
-//                .limit(1)
+                .filter(path -> {
+                    String name = path.getFileName().toString();
+                    return !(name.equalsIgnoreCase("Icon.") || name.equalsIgnoreCase(".DS_Store"));
+                })
                 .forEach(path -> {
                     try {
                         MessageDigest messageDigest = MessageDigest.getInstance("SHA-1");
@@ -63,14 +67,15 @@ public class DuplicateFinder {
                         e.printStackTrace();
                     }
 
-
-                    System.out.println(counter.getAndIncrement() + " / " + totalSize);
+                    BigDecimal val = new BigDecimal(counter.getAndIncrement() * 100);
+                    BigDecimal percent = val.divide(new BigDecimal(totalSize), MathContext.DECIMAL32);
+                    System.out.println(percent.toString() + "%");
                 });
 
         for (String key : hashes.keySet()) {
             List<Path> paths = hashes.get(key);
 
-            if (paths.size() > 1){
+            if (paths.size() > 1) {
                 System.out.println("Дубликаты:");
                 paths.forEach(System.out::println);
                 System.out.println("=================================");
@@ -86,7 +91,7 @@ public class DuplicateFinder {
 //            System.out.println(pathTarget);
 //            System.out.println(pathTarget.getParent());
 
-            if (!Files.exists(pathTarget.getParent())){
+            if (!Files.exists(pathTarget.getParent())) {
                 Files.createDirectories(pathTarget.getParent());
             }
             Files.copy(pathFrom, pathTarget, StandardCopyOption.COPY_ATTRIBUTES);
